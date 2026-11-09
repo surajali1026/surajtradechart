@@ -200,6 +200,23 @@ fun CandlestickChartCompose(
                             )
                         }
                     }
+                    DrawingType.PRICE_RANGE -> {
+                        if (drawing.points.size >= 2) {
+                            val y1 = priceToY(drawing.points[0].price)
+                            val y2 = priceToY(drawing.points[1].price)
+                            val top = min(y1, y2)
+                            val h = Math.abs(y2 - y1)
+                            val diff = drawing.points[1].price - drawing.points[0].price
+                            val isGain = diff >= 0f
+                            val rangeColor = if (isGain) TVBullishGreen else TVBearishRed
+                            drawRect(
+                                color = rangeColor.copy(alpha = 0.2f),
+                                topLeft = Offset(50f, top),
+                                size = Size(chartWidth - 100f, h)
+                            )
+                        }
+                    }
+                    else -> Unit
                 }
             }
 
