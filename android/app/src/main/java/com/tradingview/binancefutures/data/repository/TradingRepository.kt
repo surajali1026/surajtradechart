@@ -8,7 +8,11 @@ import kotlinx.coroutines.flow.Flow
 
 interface TradingRepository {
     suspend fun getFuturesTradingPairs(): List<TradingPair>
-    suspend fun getHistoricalCandles(symbol: String, timeframe: Timeframe): List<Candle>
+    suspend fun getHistoricalCandles(
+        symbol: String,
+        timeframe: Timeframe,
+        priceType: com.tradingview.binancefutures.domain.model.PriceType = com.tradingview.binancefutures.domain.model.PriceType.LAST
+    ): List<Candle>
     fun getLiveCandleStream(symbol: String, timeframe: Timeframe): Flow<Candle>
 }
 
@@ -19,8 +23,12 @@ class TradingRepositoryImpl(
         return remoteDataSource.getFuturesTickers()
     }
 
-    override suspend fun getHistoricalCandles(symbol: String, timeframe: Timeframe): List<Candle> {
-        return remoteDataSource.getHistoricalKlines(symbol, timeframe)
+    override suspend fun getHistoricalCandles(
+        symbol: String,
+        timeframe: Timeframe,
+        priceType: com.tradingview.binancefutures.domain.model.PriceType
+    ): List<Candle> {
+        return remoteDataSource.getHistoricalKlines(symbol, timeframe, priceType)
     }
 
     override fun getLiveCandleStream(symbol: String, timeframe: Timeframe): Flow<Candle> {

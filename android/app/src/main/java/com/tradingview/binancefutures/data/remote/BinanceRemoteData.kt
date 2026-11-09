@@ -61,32 +61,53 @@ class BinanceRemoteDataSource(
     suspend fun getHistoricalKlines(
         symbol: String,
         timeframe: Timeframe,
+        priceType: com.tradingview.binancefutures.domain.model.PriceType = com.tradingview.binancefutures.domain.model.PriceType.LAST,
         limit: Int = 500
     ): List<Candle> = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/fapi/v1/klines?symbol=${symbol.uppercase()}&interval=${timeframe.interval}&limit=$limit"
+        val endpoint = when (priceType) {
+            com.tradingview.binancefutures.domain.model.PriceType.LAST -> "klines?symbol=${symbol.uppercase()}"
+            com.tradingview.binancefutures.domain.model.PriceType.MARK -> "markPriceKlines?symbol=${symbol.uppercase()}"
+            com.tradingview.binancefutures.domain.model.PriceType.INDEX -> "indexPriceKlines?pair=${symbol.uppercase()}"
+        }
+        val url = "$baseUrl/fapi/v1/$endpoint&interval=${timeframe.interval}&limit=$limit"
         val request = Request.Builder().url(url).build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Failed to fetch klines: ${response.code}")
-            val body = response.body?.string() ?: return@withContext emptyList()
-            val array = gson.fromJson(body, JsonArray::class.java)
-
-            val candles = mutableListOf<Candle>()
-            for (element in array) {
-                val kline = element.asJsonArray
-                candles.add(
-                    Candle(
-                        time = kline.get(0).asLong,
-                        open = kline.get(1).asFloat,
-                        high = kline.get(2).asFloat,
-                        low = kline.get(3).asFloat,
-                        close = kline.get(4).asFloat,
-                        volume = kline.get(5).asFloat
-                    )
-                )
+            if (!response.isSuccessful) {
+                // If indexPriceKlines fails with pair, try symbol
+                if (priceType == com.tradingview.binancefutures.domain.model.PriceType.INDEX) {
+                    val fallbackUrl = "$baseUrl/fapi/v1/indexPriceKlines?symbol=${symbol.uppercase()}&interval=${timeframe.interval}&limit=$limit"
+                    client.newCall(Request.Builder().url(fallbackUrl).build()).execute().use { fbResp ->
+                        if (fbResp.isSuccessful) {
+                            val fbBody = fbResp.body?.string() ?: return@withContext emptyList()
+                            return@withContext parseKlinesJson(fbBody)
+                        }
+                    }
+                }
+                throw IOException("Failed to fetch klines: ${response.code}")
             }
-            candles
+            val body = response.body?.string() ?: return@withContext emptyList()
+            parseKlinesJson(body)
         }
+    }
+
+    private fun parseKlinesJson(jsonString: String): List<Candle> {
+        val array = gson.fromJson(jsonString, JsonArray::class.java)
+        val candles = mutableListOf<Candle>()
+        for (element in array) {
+            val kline = element.asJsonArray
+            candles.add(
+                Candle(
+                    time = kline.get(0).asLong,
+                    open = kline.get(1).asFloat,
+                    high = kline.get(2).asFloat,
+                    low = kline.get(3).asFloat,
+                    close = kline.get(4).asFloat,
+                    volume = kline.get(5).asFloat
+                )
+            )
+        }
+        return candles
     }
 
     fun observeLiveKline(symbol: String, timeframe: Timeframe): Flow<Candle> = callbackFlow {

@@ -62,25 +62,33 @@ class ChartViewModel(
     fun selectSymbol(symbol: String) {
         if (_uiState.value.symbol == symbol) return
         _uiState.value = _uiState.value.copy(symbol = symbol)
-        loadCandles(symbol, _uiState.value.timeframe)
+        loadCandles(symbol, _uiState.value.timeframe, _uiState.value.priceType)
     }
 
     fun selectTimeframe(tf: Timeframe) {
         if (_uiState.value.timeframe == tf) return
         _uiState.value = _uiState.value.copy(timeframe = tf)
-        loadCandles(_uiState.value.symbol, tf)
+        loadCandles(_uiState.value.symbol, tf, _uiState.value.priceType)
     }
 
     fun setPriceType(type: PriceType) {
+        if (_uiState.value.priceType == type) return
         _uiState.value = _uiState.value.copy(priceType = type)
+        loadCandles(_uiState.value.symbol, _uiState.value.timeframe, type)
     }
 
-    private fun loadCandles(symbol: String, tf: Timeframe) {
+    fun toggleFavorite(symbol: String) {
+        val current = _uiState.value.favorites
+        val updated = if (current.contains(symbol)) current - symbol else current + symbol
+        _uiState.value = _uiState.value.copy(favorites = updated)
+    }
+
+    private fun loadCandles(symbol: String, tf: Timeframe, pType: PriceType = _uiState.value.priceType) {
         wsJob?.cancel()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val history = repository.getHistoricalCandles(symbol, tf)
+                val history = repository.getHistoricalCandles(symbol, tf, pType)
                 _uiState.value = _uiState.value.copy(candles = history, isLoading = false)
 
                 // Start WebSocket stream
@@ -147,6 +155,10 @@ class ChartViewModel(
             condition = condition
         )
         _uiState.value = _uiState.value.copy(alerts = _uiState.value.alerts + alert)
+    }
+
+    fun deleteAlert(id: String) {
+        _uiState.value = _uiState.value.copy(alerts = _uiState.value.alerts.filter { it.id != id })
     }
 
     private fun checkAlerts(currentPrice: Float) {
