@@ -1,0 +1,6 @@
+{
+  "name": "Binance Futures TradingView",
+  "description": "TradingView-style Binance USD-M Futures trading app with live candlestick charts, drawing tools, price alerts, 4-tier watchlist, candle countdown, bar replay, and native Android Jetpack Compose project.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
