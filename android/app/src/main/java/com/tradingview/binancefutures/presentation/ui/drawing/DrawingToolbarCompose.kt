@@ -48,7 +48,7 @@ fun DrawingToolbarCompose(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Cursor / Deselect
